@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::Parser;
+use colored::Colorize;
 
 use cli::{Cli, Commands};
 use config::{Config, LocalConfig};
@@ -31,7 +32,7 @@ fn main() -> ExitCode {
 
 fn cmd_ls(cwd: Option<&PathBuf>) -> ExitCode {
     let Some(cwd) = cwd else {
-        eprintln!("Error: couldn't get current directory");
+        eprintln!("{} couldn't get current directory", "error:".red().bold());
         return ExitCode::FAILURE;
     };
 
@@ -42,7 +43,7 @@ fn cmd_ls(cwd: Option<&PathBuf>) -> ExitCode {
         }
         ExitCode::SUCCESS
     } else {
-        println!("no env files remembered for this directory");
+        println!("{}", "no env files remembered for this directory".dimmed());
         ExitCode::SUCCESS
     }
 }
@@ -57,30 +58,44 @@ fn cmd_run(
         .and_then(|l| l.memory.enabled)
         .unwrap_or(config.memory.enabled);
 
-    let env_files = if cli.env_files.is_empty() && memory_enabled {
+    let (raw_files, env_files) = if cli.env_files.is_empty() && memory_enabled {
         let mem = Memory::load();
-        cwd.and_then(|d| mem.get(d).cloned())
-            .map(|files| filter_existing(&files))
-            .unwrap_or_default()
-    } else if let Some(local) = local {
-        local.expand_aliases(&cli.env_files)
+        let recalled = cwd.and_then(|d| mem.get(d).cloned()).unwrap_or_default();
+        let expanded = local.map_or_else(|| recalled.clone(), |l| l.expand_aliases(&recalled));
+        let filtered = filter_existing(&expanded);
+        (recalled, filtered)
     } else {
-        cli.env_files.clone()
+        let expanded = local.map_or_else(
+            || cli.env_files.clone(),
+            |l| l.expand_aliases(&cli.env_files),
+        );
+        (cli.env_files.clone(), expanded)
     };
 
     if env_files.is_empty() {
-        eprintln!("Error: No env files specified and none in memory");
+        eprintln!(
+            "{} no env files specified and none in memory",
+            "error:".red().bold()
+        );
         return ExitCode::FAILURE;
     }
 
     if cli.command.is_empty() {
-        eprintln!("Error: No command specified");
+        eprintln!("{} no command specified", "error:".red().bold());
         return ExitCode::FAILURE;
     }
 
-    if memory_enabled && let Some(cwd) = cwd {
+    let files_to_remember: Vec<_> = raw_files
+        .iter()
+        .filter(|f| !f.starts_with('@'))
+        .cloned()
+        .collect();
+    if memory_enabled
+        && !files_to_remember.is_empty()
+        && let Some(cwd) = cwd
+    {
         let mut mem = Memory::load();
-        mem.record(cwd, &env_files, config.memory.max_entries);
+        mem.record(cwd, &files_to_remember, config.memory.max_entries);
         let _ = mem.save();
     }
 
@@ -91,7 +106,7 @@ fn cmd_run(
     let env_vars = match load_env_files(&env_files) {
         Ok(vars) => vars,
         Err(e) => {
-            eprintln!("{e}");
+            eprintln!("{} {e}", "error:".red().bold());
             return ExitCode::FAILURE;
         }
     };

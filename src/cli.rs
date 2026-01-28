@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 const AFTER_HELP: &str = "\
 wenv remembers which env files you use per directory.
 run without env files to reuse the last ones.
+(aliases aren't memorized - they're already shortcuts)
 
 aliases in .wenv.toml:
   [aliases]

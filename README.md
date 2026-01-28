@@ -59,6 +59,8 @@ then:
 wenv @dev -- python main.py
 ```
 
+aliases aren't memorized - they're already shortcuts
+
 ## per-project config
 
 `.wenv.toml` can also disable memory:

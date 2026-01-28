@@ -5,8 +5,10 @@ load env files and run stuff
 ## install
 
 ```
-cargo install --path .
+brew install uwinx/tap/wenv
 ```
+
+or `cargo install --path .`
 
 ## usage
 

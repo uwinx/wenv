@@ -4,6 +4,7 @@ mod env;
 mod memory;
 mod run;
 
+use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::Parser;
@@ -21,47 +22,42 @@ fn main() -> ExitCode {
     let local = cwd.as_ref().and_then(|d| LocalConfig::load(d));
 
     match cli.subcommand {
-        Some(Commands::Ls) => cmd_ls(&cwd),
-        None => cmd_run(&cli, &config, &local, &cwd),
+        Some(Commands::Ls) => cmd_ls(cwd.as_ref()),
+        None => cmd_run(&cli, &config, local.as_ref(), cwd.as_ref()),
     }
 }
 
-fn cmd_ls(cwd: &Option<std::path::PathBuf>) -> ExitCode {
+fn cmd_ls(cwd: Option<&PathBuf>) -> ExitCode {
     let Some(cwd) = cwd else {
         eprintln!("Error: couldn't get current directory");
         return ExitCode::FAILURE;
     };
 
     let mem = Memory::load();
-    match mem.get(cwd) {
-        Some(files) => {
-            for f in files {
-                println!("{}", f);
-            }
-            ExitCode::SUCCESS
+    if let Some(files) = mem.get(cwd) {
+        for f in files {
+            println!("{f}");
         }
-        None => {
-            println!("no env files remembered for this directory");
-            ExitCode::SUCCESS
-        }
+        ExitCode::SUCCESS
+    } else {
+        println!("no env files remembered for this directory");
+        ExitCode::SUCCESS
     }
 }
 
 fn cmd_run(
     cli: &Cli,
     config: &Config,
-    local: &Option<LocalConfig>,
-    cwd: &Option<std::path::PathBuf>,
+    local: Option<&LocalConfig>,
+    cwd: Option<&PathBuf>,
 ) -> ExitCode {
     let memory_enabled = local
-        .as_ref()
         .and_then(|l| l.memory.enabled)
         .unwrap_or(config.memory.enabled);
 
     let env_files = if cli.env_files.is_empty() && memory_enabled {
         let mem = Memory::load();
-        cwd.as_ref()
-            .and_then(|d| mem.get(d).cloned())
+        cwd.and_then(|d| mem.get(d).cloned())
             .map(|files| filter_existing(&files))
             .unwrap_or_default()
     } else {
@@ -69,7 +65,6 @@ fn cmd_run(
     };
 
     if env_files.is_empty() {
-        // todo(uwinx): too harsh (???), consider warning here
         eprintln!("Error: No env files specified and none in memory");
         return ExitCode::FAILURE;
     }
@@ -82,17 +77,18 @@ fn cmd_run(
     let env_vars = match load_env_files(&env_files) {
         Ok(vars) => vars,
         Err(e) => {
-            eprintln!("{}", e);
+            eprintln!("{e}");
             return ExitCode::FAILURE;
         }
     };
 
     if memory_enabled
-        && let Some(cwd) = cwd {
-            let mut mem = Memory::load();
-            mem.record(cwd, &env_files, config.memory.max_entries);
-            let _ = mem.save();
-        }
+        && let Some(cwd) = cwd
+    {
+        let mut mem = Memory::load();
+        mem.record(cwd, &env_files, config.memory.max_entries);
+        let _ = mem.save();
+    }
 
     exec(&cli.command, env_vars)
 }

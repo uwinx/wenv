@@ -15,9 +15,10 @@ pub fn exec(command: &[String], env_vars: HashMap<String, String>) -> ExitCode {
     }
 
     match cmd.status() {
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         Ok(status) => ExitCode::from(status.code().unwrap_or(1) as u8),
         Err(e) => {
-            eprintln!("Error executing command: {}", e);
+            eprintln!("Error executing command: {e}");
             ExitCode::FAILURE
         }
     }

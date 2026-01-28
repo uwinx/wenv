@@ -23,6 +23,9 @@ pub struct Cli {
     #[arg(help = "env files to load (uses memory if empty)")]
     pub env_files: Vec<String>,
 
+    #[arg(short, long, help = "rerun on env file changes")]
+    pub watch: bool,
+
     #[arg(last = true, help = "command to run")]
     pub command: Vec<String>,
 

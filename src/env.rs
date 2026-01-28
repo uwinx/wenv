@@ -6,8 +6,7 @@ pub fn load_env_files(files: &[String]) -> Result<HashMap<String, String>, Strin
     let mut vars = HashMap::new();
 
     for file in files {
-        let content =
-            fs::read_to_string(file).map_err(|e| format!("Error reading {file}: {e}"))?;
+        let content = fs::read_to_string(file).map_err(|e| format!("Error reading {file}: {e}"))?;
 
         for line in content.lines() {
             let line = line.trim();

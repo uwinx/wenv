@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
     pub memory: MemoryConfig,
@@ -47,7 +46,6 @@ impl Default for MemoryConfig {
         }
     }
 }
-
 
 impl Config {
     pub fn load() -> Self {

@@ -3,6 +3,7 @@ mod config;
 mod env;
 mod memory;
 mod run;
+mod watch;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -14,6 +15,7 @@ use config::{Config, LocalConfig};
 use env::{filter_existing, load_env_files};
 use memory::Memory;
 use run::exec;
+use watch::watch_and_run;
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
@@ -76,6 +78,16 @@ fn cmd_run(
         return ExitCode::FAILURE;
     }
 
+    if memory_enabled && let Some(cwd) = cwd {
+        let mut mem = Memory::load();
+        mem.record(cwd, &env_files, config.memory.max_entries);
+        let _ = mem.save();
+    }
+
+    if cli.watch {
+        watch_and_run(&env_files, &cli.command);
+    }
+
     let env_vars = match load_env_files(&env_files) {
         Ok(vars) => vars,
         Err(e) => {
@@ -83,14 +95,6 @@ fn cmd_run(
             return ExitCode::FAILURE;
         }
     };
-
-    if memory_enabled
-        && let Some(cwd) = cwd
-    {
-        let mut mem = Memory::load();
-        mem.record(cwd, &env_files, config.memory.max_entries);
-        let _ = mem.save();
-    }
 
     exec(&cli.command, env_vars)
 }

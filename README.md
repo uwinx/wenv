@@ -68,6 +68,14 @@ wenv @dev -- python main.py
 enabled = false
 ```
 
+## watch mode
+
+rerun on env file changes:
+
+```
+wenv -w .env -- python main.py
+```
+
 ## compatibility
 
 tested on mac. probably works on linux. windo| ha-ha funny.

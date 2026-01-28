@@ -3,6 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct Config {
     #[serde(default)]
     pub memory: MemoryConfig,
@@ -44,13 +45,6 @@ impl Default for MemoryConfig {
     }
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            memory: MemoryConfig::default(),
-        }
-    }
-}
 
 impl Config {
     pub fn load() -> Self {

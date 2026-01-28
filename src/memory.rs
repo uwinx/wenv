@@ -32,8 +32,7 @@ impl Memory {
             fs::create_dir_all(dir)?;
         }
 
-        let content = toml::to_string_pretty(self)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        let content = toml::to_string_pretty(self).map_err(std::io::Error::other)?;
         fs::write(path, content)
     }
 

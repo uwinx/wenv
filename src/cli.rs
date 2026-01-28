@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 const AFTER_HELP: &str = "\
 wenv remembers which env files you use per directory.
@@ -16,10 +16,20 @@ opt out per project with .wenv.toml:
 #[command(name = "wenv")]
 #[command(about = "load env files and run stuff")]
 #[command(after_help = AFTER_HELP)]
-pub struct Args {
+#[command(args_conflicts_with_subcommands = true)]
+pub struct Cli {
     #[arg(help = "env files to load (uses memory if empty)")]
     pub env_files: Vec<String>,
 
-    #[arg(last = true, required = true, help = "command to run")]
+    #[arg(last = true, help = "command to run")]
     pub command: Vec<String>,
+
+    #[command(subcommand)]
+    pub subcommand: Option<Commands>,
+}
+
+#[derive(Subcommand)]
+pub enum Commands {
+    /// show remembered env files for current directory
+    Ls,
 }

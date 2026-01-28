@@ -1,71 +1,62 @@
-use std::collections::HashMap;
-use std::env;
-use std::fs;
-use std::process::{Command, exit};
+mod cli;
+mod config;
+mod env;
+mod memory;
+mod run;
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
+use std::process::ExitCode;
 
-    if args.len() < 4 {
-        eprintln!(
-            "Usage: {} <env_file1> [env_file2 ...] -- <command> [args...]",
-            args[0]
-        );
-        exit(1);
+use clap::Parser;
+
+use cli::Args;
+use config::{Config, LocalConfig};
+use env::{filter_existing, load_env_files};
+use memory::Memory;
+use run::exec;
+
+fn main() -> ExitCode {
+    let args = Args::parse();
+    let config = Config::load();
+
+    let cwd = std::env::current_dir().ok();
+    let local = cwd.as_ref().and_then(|d| LocalConfig::load(d));
+
+    let memory_enabled = local
+        .as_ref()
+        .and_then(|l| l.memory.enabled)
+        .unwrap_or(config.memory.enabled);
+
+    let env_files = if args.env_files.is_empty() && memory_enabled {
+        let mem = Memory::load();
+        cwd.as_ref()
+            .and_then(|d| mem.get(d).cloned())
+            .map(|files| filter_existing(&files))
+            .unwrap_or_default()
+    } else {
+        args.env_files.clone()
+    };
+
+    if env_files.is_empty() {
+        // todo(uwinx): too harsh (???), consider warning here
+        eprintln!("Error: No env files specified and none in memory");
+        return ExitCode::FAILURE;
     }
 
-    let separator_pos = args.iter().position(|arg| arg == "--").unwrap_or_else(|| {
-        eprintln!("Error: Missing '--' separator");
-        exit(1);
-    });
-
-    let env_files = &args[1..separator_pos];
-    let command_args = &args[separator_pos + 1..];
-
-    if command_args.is_empty() {
-        eprintln!("Error: No command specified after '--'");
-        exit(1);
-    }
-
-    let mut env_vars = HashMap::new();
-
-    for env_file in env_files {
-        match fs::read_to_string(env_file) {
-            Ok(content) => {
-                for line in content.lines() {
-                    let line = line.trim();
-                    if line.is_empty() || line.starts_with('#') {
-                        continue;
-                    }
-
-                    if let Some((key, value)) = line.split_once('=') {
-                        let key = key.trim();
-                        let value = value.trim().trim_matches('"').trim_matches('\'');
-                        env_vars.insert(key.to_string(), value.to_string());
-                    }
-                }
-            }
-            Err(e) => {
-                eprintln!("Error reading {}: {}", env_file, e);
-                exit(1);
-            }
-        }
-    }
-
-    let mut cmd = Command::new(&command_args[0]);
-    cmd.args(&command_args[1..]);
-
-    for (key, value) in env_vars {
-        cmd.env(key, value);
-    }
-
-    match cmd.status() {
-        Ok(status) => {
-            exit(status.code().unwrap_or(1));
-        }
+    let env_vars = match load_env_files(&env_files) {
+        Ok(vars) => vars,
         Err(e) => {
-            eprintln!("Error executing command: {}", e);
-            exit(1);
+            eprintln!("{}", e);
+            return ExitCode::FAILURE;
+        }
+    };
+
+    if memory_enabled {
+        if let Some(ref cwd) = cwd {
+            let mut mem = Memory::load();
+            mem.record(cwd, &env_files, config.memory.max_entries);
+            let _ = mem.save();
         }
     }
+
+    exec(&args.command, env_vars)
 }

@@ -16,6 +16,42 @@ wenv .env .other.env -- python -c 'print(__import__("os").environ)'
 
 later files override earlier ones
 
+## memory
+
+wenv remembers which env files you used in each directory. next time just run:
+
+```
+wenv -- python main.py
+```
+
+it'll use the same files as last time
+
+## config
+
+lives at:
+
+- mac: `~/Library/Application Support/wenv/`
+- linux: `~/.config/wenv/`
+
+`config.toml`:
+
+```toml
+[memory]
+enabled = true
+max_entries = 10
+```
+
+`memory.toml` stores your history (edit if you want)
+
+## per-project opt-out
+
+don't want memory in a specific project? create `.wenv.toml`:
+
+```toml
+[memory]
+enabled = false
+```
+
 ## compatibility
 
 tested on mac. probably works on linux. windo| ha-ha funny.

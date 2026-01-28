@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -21,6 +22,8 @@ pub struct MemoryConfig {
 pub struct LocalConfig {
     #[serde(default)]
     pub memory: LocalMemoryConfig,
+    #[serde(default)]
+    pub aliases: HashMap<String, Vec<String>>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -72,5 +75,21 @@ impl LocalConfig {
         let path = dir.join(".wenv.toml");
         let content = fs::read_to_string(path).ok()?;
         toml::from_str(&content).ok()
+    }
+
+    pub fn expand_aliases(&self, files: &[String]) -> Vec<String> {
+        files
+            .iter()
+            .flat_map(|f| {
+                if let Some(name) = f.strip_prefix('@') {
+                    self.aliases
+                        .get(name)
+                        .cloned()
+                        .unwrap_or_else(|| vec![f.clone()])
+                } else {
+                    vec![f.clone()]
+                }
+            })
+            .collect()
     }
 }

@@ -43,9 +43,25 @@ max_entries = 10
 
 `memory.toml` stores your history (edit if you want)
 
-## per-project opt-out
+## aliases
 
-don't want memory in a specific project? create `.wenv.toml`:
+define shortcuts in `.wenv.toml`:
+
+```toml
+[aliases]
+dev = [".env", ".env.dev", ".env.local"]
+prod = [".env", ".env.prod"]
+```
+
+then:
+
+```
+wenv @dev -- python main.py
+```
+
+## per-project config
+
+`.wenv.toml` can also disable memory:
 
 ```toml
 [memory]

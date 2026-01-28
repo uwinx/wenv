@@ -4,13 +4,15 @@ const AFTER_HELP: &str = "\
 wenv remembers which env files you use per directory.
 run without env files to reuse the last ones.
 
+aliases in .wenv.toml:
+  [aliases]
+  dev = [\".env\", \".env.dev\"]
+
+  then: wenv @dev -- cmd
+
 config:
   mac:   ~/Library/Application Support/wenv/
-  linux: ~/.config/wenv/
-
-opt out per project with .wenv.toml:
-  [memory]
-  enabled = false";
+  linux: ~/.config/wenv/";
 
 #[derive(Parser)]
 #[command(name = "wenv")]

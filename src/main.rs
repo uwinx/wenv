@@ -60,6 +60,8 @@ fn cmd_run(
         cwd.and_then(|d| mem.get(d).cloned())
             .map(|files| filter_existing(&files))
             .unwrap_or_default()
+    } else if let Some(local) = local {
+        local.expand_aliases(&cli.env_files)
     } else {
         cli.env_files.clone()
     };
